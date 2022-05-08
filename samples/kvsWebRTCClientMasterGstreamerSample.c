@@ -184,6 +184,7 @@ PVOID sendGstreamerAudioVideo(PVOID args)
 
             pipeline = gst_parse_launch(
                 "rtspsrc location=rtsp://admin:decafbad00@192.168.0.44:554 ! "
+                "rtph264depay ! video/x-h264 !"
                 "appsink sync=TRUE emit-signals=TRUE name=appsink-video",
                 &error);
 
