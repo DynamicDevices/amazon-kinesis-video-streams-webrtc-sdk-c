@@ -55,6 +55,7 @@ extern "C" {
 typedef enum {
     SAMPLE_STREAMING_VIDEO_ONLY,
     SAMPLE_STREAMING_AUDIO_VIDEO,
+    SAMPLE_STREAMING_RTSP,
 } SampleStreamingMediaType;
 
 typedef struct __SampleStreamingSession SampleStreamingSession;

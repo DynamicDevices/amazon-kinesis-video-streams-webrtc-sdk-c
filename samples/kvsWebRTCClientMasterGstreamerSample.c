@@ -179,6 +179,15 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                                      &error);
             }
             break;
+
+        case SAMPLE_STREAMING_RTSP:
+
+            pipeline = gst_parse_launch(
+                "rtspsrc location=rtsp://admin:decafbad00@192.168.0.44:554 ! "
+                "appsink sync=TRUE emit-signals=TRUE name=appsink-video",
+                &error);
+
+            break;
     }
 
     if (pipeline == NULL) {
@@ -386,6 +395,9 @@ INT32 main(INT32 argc, CHAR* argv[])
         } else if (STRCMP(argv[2], "audio-video") == 0) {
             pSampleConfiguration->mediaType = SAMPLE_STREAMING_AUDIO_VIDEO;
             printf("[KVS Gstreamer Master] Streaming audio and video\n");
+        } else if (STRCMP(argv[2], "rtsp") == 0) {
+            pSampleConfiguration->mediaType = SAMPLE_STREAMING_RTSP;
+            printf("[KVS Gstreamer Master] Streaming RTSP\n");
         } else {
             printf("[KVS Gstreamer Master] Unrecognized streaming type. Default to video-only\n");
         }
