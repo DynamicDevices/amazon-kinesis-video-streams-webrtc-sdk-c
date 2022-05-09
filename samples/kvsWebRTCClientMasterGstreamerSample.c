@@ -114,6 +114,40 @@ GstFlowReturn on_new_sample_audio(GstElement* sink, gpointer data)
     return on_new_sample(sink, data, DEFAULT_AUDIO_TRACK_ID);
 }
 
+static gboolean
+bus_call (GstBus     *bus,
+          GstMessage *msg,
+          gpointer    data)
+{
+  GMainLoop *loop = (GMainLoop *) data;
+
+  switch (GST_MESSAGE_TYPE (msg)) {
+
+    case GST_MESSAGE_EOS:
+      g_print ("End of stream\n");
+      g_main_loop_quit (loop);
+      break;
+
+    case GST_MESSAGE_ERROR: {
+      gchar  *debug;
+      GError *error;
+
+      gst_message_parse_error (msg, &error, &debug);
+      g_free (debug);
+
+      g_printerr ("Error: %s\n", error->message);
+      g_error_free (error);
+
+      g_main_loop_quit (loop);
+      break;
+    }
+    default:
+      break;
+  }
+
+  return TRUE;
+}
+
 PVOID sendGstreamerAudioVideo(PVOID args)
 {
     STATUS retStatus = STATUS_SUCCESS;
@@ -183,8 +217,8 @@ PVOID sendGstreamerAudioVideo(PVOID args)
         case SAMPLE_STREAMING_RTSP:
 
             pipeline = gst_parse_launch(
-                "rtspsrc location=rtsp://admin:decafbad00@192.168.0.44:554 ! "
-                "rtph264depay ! video/x-h264 !"
+                "rtspsrc location=rtsp://admin:decafbad00@192.168.0.44:554 ! rtph264depay ! "
+                "video/x-h264,stream-format=byte-stream,alignment=au,profile=baseline ! "
                 "appsink sync=TRUE emit-signals=TRUE name=appsink-video",
                 &error);
 
@@ -218,7 +252,21 @@ PVOID sendGstreamerAudioVideo(PVOID args)
 
     /* block until error or EOS */
     bus = gst_element_get_bus(pipeline);
-    msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+//    msg = gst_bus_timed_pop_filtered(bus, GST_CLOCK_TIME_NONE, GST_MESSAGE_ERROR | GST_MESSAGE_EOS);
+
+   GMainLoop *loop;
+   guint bus_watch_id;
+   
+   loop = g_main_loop_new (NULL, FALSE);
+   bus_watch_id = gst_bus_add_watch (bus, bus_call, loop);
+
+  /* Iterate */
+  g_print ("Running...\n");
+
+  g_main_loop_run (loop);
+
+  /* Out of the main loop, clean up nicely */
+  g_print ("Returned, stopping playback\n");
 
     /* Free resources */
     if (msg != NULL) {
@@ -227,6 +275,10 @@ PVOID sendGstreamerAudioVideo(PVOID args)
     gst_object_unref(bus);
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
+
+  // AJL
+  g_source_remove (bus_watch_id);
+  g_main_loop_unref (loop);
 
 CleanUp:
 
