@@ -223,6 +223,19 @@ PVOID sendGstreamerAudioVideo(PVOID args)
                 &error);
 
             break;
+
+        case SAMPLE_STREAMING_CUSTOM:
+
+            // Example pipeline format needs to be like this. Note that we need to be outputting to the named appsink-video to send data through the Kinesis libraries
+            //
+            // kvsWebRTCClientMasterGstreamerSample [Channel] custom "pipeline start goes here ! appsink sync=TRUE emit-signals=TRUE name=appsink-video"
+            //
+            printf("[KVS GStreamer Master] sendGstreamerAudioVideo() running pipeline: %s\n", pSampleConfiguration->pCustomPipeline);
+            pipeline = gst_parse_launch(
+                pSampleConfiguration->pCustomPipeline,
+                &error);
+
+            break;
     }
 
     if (pipeline == NULL) {
@@ -256,7 +269,7 @@ PVOID sendGstreamerAudioVideo(PVOID args)
 
    GMainLoop *loop;
    guint bus_watch_id;
-   
+
    loop = g_main_loop_new (NULL, FALSE);
    bus_watch_id = gst_bus_add_watch (bus, bus_call, loop);
 
@@ -451,6 +464,15 @@ INT32 main(INT32 argc, CHAR* argv[])
         } else if (STRCMP(argv[2], "rtsp") == 0) {
             pSampleConfiguration->mediaType = SAMPLE_STREAMING_RTSP;
             printf("[KVS Gstreamer Master] Streaming RTSP\n");
+        } else if (STRCMP(argv[2], "custom") == 0) {
+            if(argc < 4) {
+              printf("[KVS Gstreamer Master] Missing custom pipeline argument!\n");
+              goto CleanUp;
+            } else {
+              pSampleConfiguration->pCustomPipeline = (PCHAR *)argv[3];
+              pSampleConfiguration->mediaType = SAMPLE_STREAMING_CUSTOM;
+              printf("[KVS Gstreamer Master] Streaming custom pipeline\n");
+            }
         } else {
             printf("[KVS Gstreamer Master] Unrecognized streaming type. Default to video-only\n");
         }
@@ -458,7 +480,8 @@ INT32 main(INT32 argc, CHAR* argv[])
         printf("[KVS Gstreamer Master] Streaming video only\n");
     }
 
-    if (argc > 3) {
+    // We use argv[3] for a custom pipeline if we're in "custom" mode
+    if (argc > 3 && pSampleConfiguration->mediaType != SAMPLE_STREAMING_CUSTOM) {
         if (STRCMP(argv[3], "testsrc") == 0) {
             printf("[KVS GStreamer Master] Using test source in GStreamer\n");
             pSampleConfiguration->useTestSrc = TRUE;
